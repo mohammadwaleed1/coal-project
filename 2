@@ -1,0 +1,196 @@
+INCLUDE Irvine32.inc
+
+NAME_MAX  = 30
+JOB_MAX   = 30
+PHONE_MAX = 15
+
+.data
+
+menuText BYTE "===== Hire Management System =====",0
+opt1     BYTE "1. Add Employee",0
+opt2     BYTE "2. View Employee",0
+opt3     BYTE "3. Delete Employee",0
+opt4     BYTE "4. Exit",0
+askOpt   BYTE "Enter option: ",0
+
+msgName  BYTE "Enter Name: ",0
+msgJob   BYTE "Enter Job Title: ",0
+msgPhone BYTE "Enter Phone Number: ",0
+msgSaved BYTE "Record Saved!",0
+msgDel   BYTE "Record Deleted!",0
+msgEmpty BYTE "No employee record found!",0
+
+nameInput  BYTE NAME_MAX+1 DUP(0)
+jobInput   BYTE JOB_MAX+1  DUP(0)
+phoneInput BYTE PHONE_MAX+1 DUP(0)
+
+Employee STRUCT
+    Name  BYTE NAME_MAX+1 DUP(0)
+    Job   BYTE JOB_MAX+1 DUP(0)
+    Phone BYTE PHONE_MAX+1 DUP(0)
+Employee ENDS
+
+record Employee <>
+
+recordExists DWORD 0   ; 0=no record, 1=record saved
+
+
+.code
+main PROC
+
+MenuStart:
+    call Clrscr
+
+    ; Print Menu
+    mov edx, OFFSET menuText
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt1
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt2
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt3
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt4
+    call WriteString
+    call CRLF
+    call CRLF
+
+    mov edx, OFFSET askOpt
+    call WriteString
+
+    call ReadInt        ; read option into EAX
+
+    cmp eax, 1
+    je AddEmployee
+
+    cmp eax, 2
+    je ViewEmployee
+
+    cmp eax, 3
+    je DeleteEmployee
+
+    cmp eax, 4
+    je ExitProgram
+
+    jmp MenuStart   ; invalid option → show menu again
+
+
+; -------------------------------
+; Add Employee Option (1)
+; -------------------------------
+AddEmployee:
+
+    ; Name
+    mov edx, OFFSET msgName
+    call WriteString
+    mov edx, OFFSET nameInput
+    mov ecx, NAME_MAX
+    call ReadString
+
+    mov esi, OFFSET nameInput
+    mov edi, OFFSET record.Name
+    mov ecx, NAME_MAX+1
+    rep movsb
+
+    ; Job
+    mov edx, OFFSET msgJob
+    call WriteString
+    mov edx, OFFSET jobInput
+    mov ecx, JOB_MAX
+    call ReadString
+
+    mov esi, OFFSET jobInput
+    mov edi, OFFSET record.Job
+    mov ecx, JOB_MAX+1
+    rep movsb
+
+    ; Phone
+    mov edx, OFFSET msgPhone
+    call WriteString
+    mov edx, OFFSET phoneInput
+    mov ecx, PHONE_MAX
+    call ReadString
+
+    mov esi, OFFSET phoneInput
+    mov edi, OFFSET record.Phone
+    mov ecx, PHONE_MAX+1
+    rep movsb
+
+    mov recordExists, 1
+
+    mov edx, OFFSET msgSaved
+    call WriteString
+    call CRLF
+    call WaitMsg
+
+    jmp MenuStart
+
+
+; -------------------------------
+; View Employee Option (2)
+; -------------------------------
+ViewEmployee:
+
+    cmp recordExists, 1
+    jne NoRecord
+
+    ; Print Name
+    mov edx, OFFSET record.Name
+    call WriteString
+    call CRLF
+
+    ; Print Job
+    mov edx, OFFSET record.Job
+    call WriteString
+    call CRLF
+
+    ; Print Phone
+    mov edx, OFFSET record.Phone
+    call WriteString
+    call CRLF
+
+    call WaitMsg
+    jmp MenuStart
+
+NoRecord:
+    mov edx, OFFSET msgEmpty
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+
+; -------------------------------
+; Delete Employee Option (3)
+; -------------------------------
+DeleteEmployee:
+    mov recordExists, 0
+
+    mov edi, OFFSET record
+    mov ecx, SIZEOF record
+    mov al, 0
+    rep stosb
+
+    mov edx, OFFSET msgDel
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+
+; -------------------------------
+; Exit Option (4)
+; -------------------------------
+ExitProgram:
+    exit
+
+main ENDP
+END main
