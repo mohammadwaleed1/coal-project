@@ -1,0 +1,291 @@
+INCLUDE Irvine32.inc
+
+NAME_MAX       = 30
+JOB_MAX        = 30
+PHONE_MAX      = 15
+MAX_EMPLOYEES  = 100
+
+.data
+menuText BYTE "===== Hire Management System =====",0
+opt1     BYTE "1. Add Employee",0
+opt2     BYTE "2. View All Employees",0
+opt3     BYTE "3. Delete Specific Employee",0
+opt4     BYTE "4. Delete All Employees",0
+opt5     BYTE "5. Exit",0
+askOpt   BYTE "Enter option: ",0
+
+msgName    BYTE "Enter Name: ",0
+msgJob     BYTE "Enter Job Title: ",0
+msgPhone   BYTE "Enter Phone Number: ",0
+msgSaved   BYTE "Employee Saved!",0
+msgDel     BYTE "Employee Deleted!",0
+msgDelAll  BYTE "All Records Deleted!",0
+msgFull    BYTE "Employee list is full!",0
+msgEmpty   BYTE "No employee records found!",0
+msgIndex   BYTE "Enter Employee Index to Delete (1-based): ",0
+msgInvalid BYTE "Invalid index!",0
+
+nameInput  BYTE NAME_MAX+1 DUP(0)
+jobInput   BYTE JOB_MAX+1  DUP(0)
+phoneInput BYTE PHONE_MAX+1 DUP(0)
+
+Employee STRUCT
+    Name  BYTE NAME_MAX+1 DUP(0)
+    Job   BYTE JOB_MAX+1 DUP(0)
+    Phone BYTE PHONE_MAX+1 DUP(0)
+Employee ENDS
+
+employees Employee MAX_EMPLOYEES DUP(<>)  
+employeeCount DWORD 0
+
+.code
+main PROC
+
+MenuStart:
+    call Clrscr
+
+    mov edx, OFFSET menuText
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt1
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt2
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt3
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt4
+    call WriteString
+    call CRLF
+
+    mov edx, OFFSET opt5
+    call WriteString
+    call CRLF
+    call CRLF
+
+    mov edx, OFFSET askOpt
+    call WriteString
+    call ReadInt
+    mov ebx, eax
+
+    cmp ebx, 1
+    je AddEmployee
+    cmp ebx, 2
+    je ViewEmployees
+    cmp ebx, 3
+    je DeleteEmployee
+    cmp ebx, 4
+    je DeleteAllEmployees
+    cmp ebx, 5
+    je ExitProgram
+    jmp MenuStart
+
+
+; =====================================
+; ADD EMPLOYEE
+; =====================================
+AddEmployee:
+    cmp employeeCount, MAX_EMPLOYEES
+    jae FullList
+
+    ; Base of new record
+    mov eax, employeeCount
+    imul eax, SIZEOF Employee
+    mov edi, OFFSET employees
+    add edi, eax
+
+    ; NAME
+    mov edx, OFFSET msgName
+    call WriteString
+    mov edx, OFFSET nameInput
+    mov ecx, NAME_MAX
+    call ReadString
+
+    mov esi, OFFSET nameInput
+    mov ecx, NAME_MAX+1
+    rep movsb
+
+    ; JOB
+    mov edx, OFFSET msgJob
+    call WriteString
+    mov edx, OFFSET jobInput
+    mov ecx, JOB_MAX
+    call ReadString
+
+    mov esi, OFFSET jobInput
+    mov ecx, JOB_MAX+1
+    rep movsb
+
+    ; PHONE
+    mov edx, OFFSET msgPhone
+    call WriteString
+    mov edx, OFFSET phoneInput
+    mov ecx, PHONE_MAX
+    call ReadString
+
+    mov esi, OFFSET phoneInput
+    mov ecx, PHONE_MAX+1
+    rep movsb
+
+    inc employeeCount
+
+    mov edx, OFFSET msgSaved
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+FullList:
+    mov edx, OFFSET msgFull
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+
+; =====================================
+; VIEW ALL EMPLOYEES
+; =====================================
+ViewEmployees:
+    cmp employeeCount, 0
+    je NoRecords
+
+    mov esi, OFFSET employees
+    mov edi, employeeCount      ; use EDI as loop counter
+
+ViewLoop:
+
+    ; NAME
+    mov edx, esi
+    call WriteString
+    call CRLF
+    add esi, NAME_MAX+1
+
+    ; JOB
+    mov edx, esi
+    call WriteString
+    call CRLF
+    add esi, JOB_MAX+1
+
+    ; PHONE
+    mov edx, esi
+    call WriteString
+    call CRLF
+    add esi, PHONE_MAX+1
+
+    call CRLF
+
+    dec edi
+    jnz ViewLoop
+
+    call WaitMsg
+    jmp MenuStart
+
+
+NoRecords:
+    mov edx, OFFSET msgEmpty
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+
+; =====================================
+; DELETE EMPLOYEE BY INDEX
+; =====================================
+DeleteEmployee:
+    cmp employeeCount, 0
+    je NoRecords
+
+    mov edx, OFFSET msgIndex
+    call WriteString
+    call ReadInt
+    mov ebx, eax
+
+    cmp ebx, 1
+    jb InvalidIndex
+    cmp ebx, employeeCount
+    ja InvalidIndex
+
+    dec ebx ; convert to 0-based index
+
+    ; compute record address
+    mov eax, ebx
+    imul eax, SIZEOF Employee
+    mov edi, OFFSET employees
+    add edi, eax
+
+    ; shift left
+    mov ecx, employeeCount
+    sub ecx, ebx
+    dec ecx
+
+    cmp ecx, 0
+    jle SkipShift
+
+    mov esi, edi
+    add esi, SIZEOF Employee
+
+ShiftLoop:
+    mov edx, esi
+    mov edi, esi
+    sub edi, SIZEOF Employee
+    mov ecx, SIZEOF Employee
+    rep movsb
+    add esi, SIZEOF Employee
+
+    mov ecx, employeeCount
+    sub ecx, ebx
+    dec ecx
+    dec ecx
+    jns ShiftLoop
+
+SkipShift:
+    dec employeeCount
+
+    mov edx, OFFSET msgDel
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+InvalidIndex:
+    mov edx, OFFSET msgInvalid
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+
+; =====================================
+; DELETE ALL EMPLOYEES
+; =====================================
+DeleteAllEmployees:
+    mov edi, OFFSET employees
+    mov ecx, SIZEOF employees
+    mov al, 0
+    rep stosb
+
+    mov employeeCount, 0
+
+    mov edx, OFFSET msgDelAll
+    call WriteString
+    call CRLF
+    call WaitMsg
+    jmp MenuStart
+
+
+; =====================================
+; EXIT
+; =====================================
+ExitProgram:
+    exit
+
+main ENDP
+END main
