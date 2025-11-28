@@ -1,0 +1,53 @@
+.data
+; -----------------------------------------
+; 2D array: 3 rows × 5 columns
+; -----------------------------------------
+tableB BYTE 10h, 20h, 30h, 40h, 50h     ; row 0
+RowSize = ($ - tableB)                  ; = 5 columns
+        BYTE 60h, 70h, 80h, 90h, 0A0h   ; row 1
+        BYTE 0B0h,0C0h,0D0h,0E0h,0F0h   ; row 2
+
+rows    = 3
+cols    = RowSize
+
+.code
+main PROC
+
+    mov ebx, OFFSET tableB     ; EBX = base address of array
+    mov edi, 0                 ; edi = row counter
+
+row_loop:
+    cmp edi, rows
+    je  done                   ; stop after all rows
+
+    mov esi, 0                 ; esi = column counter
+
+column_loop:
+    cmp esi, cols
+    je  next_row               ; finished this row → go to next row
+
+    ; ------------------------------------------------
+    ; element = tableB[edi][esi]
+    ; address = base + (RowSize * edi) + esi
+    ; ------------------------------------------------
+
+    mov eax, RowSize
+    imul eax, edi              ; eax = RowSize * row_index
+    add eax, esi               ; eax = offset inside row
+    mov al, [ebx + eax]        ; AL = element value
+
+    ; You can display AL here if you want:
+    ; call WriteHexB
+    ; call Crlf
+
+    inc esi
+    jmp column_loop
+
+next_row:
+    inc edi
+    jmp row_loop
+
+done:
+    exit
+main ENDP
+END main
